@@ -1,45 +1,32 @@
+/**
+ * 启动所选应用
+ */
+
 import { select, Separator } from '@inquirer/prompts';
-import { mergeConfig, UserConfig, createServer } from 'vite';
-import { resolve } from 'path';
-import { stat } from 'fs/promises';
+import { createServer, mergeConfig } from 'vite';
 
-import { pkgNames, pkgDir } from '../build-utils';
-import viteConfig from '../config/vite.config';
+import { pkgNames, loadPkgConfig, isLibMode } from '../build-utils';
 
-const stats = await Promise.all(
-  pkgNames.map(async (pkgName) => {
-    try {
-      return await stat(resolve(pkgDir, pkgName, 'index.html'));
-    } catch (e) {
-      return null;
-    }
-  })
-);
+const pkgCaches = await loadPkgConfig();
 
 const selected = await select({
   message: '请选择需要启动的应用',
   choices: [
     new Separator(),
     ...pkgNames
-      .filter((_, index) => stats[index] && stats[index].isFile())
+      .filter((pkgName) => {
+        const cache = pkgCaches.get(pkgName);
+        if (cache === null) return false;
+        return !isLibMode(cache);
+      })
       .map((name) => ({ name, value: name })),
   ],
 });
 
-// 配置文件路径
-const configPath = resolve(pkgDir, selected, 'vite.config.ts');
-// 设置当前包的默认 root
-let config = mergeConfig(viteConfig as UserConfig, { root: resolve(pkgDir, selected) });
+let config = pkgCaches.get(selected);
 
-try {
-  // 判断文件是否存在
-  const res = await stat(configPath);
-  // 判断是否是一个文件
-  if (!res.isFile()) throw new Error('vite.config.ts is not a file');
-  // 如果文件存在则合并配置
-  config = mergeConfig(config, (await import(`file://${configPath}`)).default);
-} catch (e) {
-  /* empty */
+if (!isLibMode(config)) {
+  config = mergeConfig(config, { define: { __BROWSER__: `${true}` } });
 }
 
 const server = await createServer(config);

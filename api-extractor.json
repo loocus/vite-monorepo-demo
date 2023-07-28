@@ -2,12 +2,11 @@
   "$schema": "https://developer.microsoft.com/json-schemas/api-extractor/v7/api-extractor.schema.json",
   "mainEntryPointFilePath": "",
   "apiReport": {
-    "enabled": true,
-    "reportFolder": "<projectFolder>/temp/"
+    "enabled": false
   },
 
   "docModel": {
-    "enabled": true
+    "enabled": false
   },
 
   "dtsRollup": {
@@ -33,7 +32,8 @@
       },
 
       "ae-missing-release-tag": {
-        "logLevel": "none"
+        "logLevel": "warning",
+        "addToApiReportFile": true
       }
     },
 

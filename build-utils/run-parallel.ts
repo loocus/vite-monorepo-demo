@@ -1,7 +1,7 @@
 /**
  * 并行执行任务
  * @param tasks 任务
- * @param max 最大并发数
+ * @param max 最大并行数
  * @returns
  */
 export async function runParallel<T>(tasks: (() => Promise<T>)[], max: number) {

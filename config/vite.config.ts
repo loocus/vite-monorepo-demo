@@ -1,11 +1,7 @@
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import eslintPlugin from 'vite-plugin-eslint';
-import { IS_PROD, rootDir } from '../build-utils';
-import { resolve } from 'node:path';
-
-// 加载对应环境配置文件
-const env = await import(`file://${resolve(rootDir, `config/env.${process.env.NODE_ENV}.ts`)}`);
+import { IS_PROD, IS_DEV, pkgDir } from '../build-utils';
 
 export default defineConfig({
   mode: IS_PROD ? 'production' : 'development',
@@ -17,6 +13,10 @@ export default defineConfig({
   ],
   // 定义全局变量
   define: {
-    ...env,
+    __DEV__: IS_DEV,
+    __PROD__: IS_PROD,
+    __TEST__: false,
+    __BROWSER__: false,
+    __NODE_ENV__: `'${process.env.NODE_ENV}'`,
   },
 });

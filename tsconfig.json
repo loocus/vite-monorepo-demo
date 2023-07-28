@@ -23,8 +23,8 @@
     "noFallthroughCasesInSwitch": true,
     "paths": {
       "@vite-monorepo-demo/core": ["packages/core/src"]
-    },
+    }
   },
-  "include": ["packages/**/src/*.ts", "packages/src/**/src/*.d.ts"],
+  "include": ["packages/**/src/*.ts", "packages/**/src/*.d.ts", "packages/**/src/*.vue", "packages/*d.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
