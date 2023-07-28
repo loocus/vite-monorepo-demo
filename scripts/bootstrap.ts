@@ -68,11 +68,6 @@ async function genPackageJson() {
           require: './dist/index.cjs.js',
         },
       },
-      dependencies: isComponentLib
-        ? {
-            vue: dependencies.vue,
-          }
-        : {},
     });
   }
 
@@ -84,15 +79,19 @@ async function genPackageJson() {
 async function genViteConfig() {
   // 创建 vite.config.ts 文件
   const source = `
-    import { defineConfig } from 'vite';
-    ${isComponentLib || isLib ? `import { formatFileName } from '../../build-utils';` : ''}
+    import { defineConfig, mergeConfig } from 'vite';
+    import { formatFileName, pkgDir } from '../../build-utils';
+    import baseConfig from '../../config/vite.config';
+    import { resolve } from 'node:path';
 
-    export default defineConfig(${
+    export default mergeConfig(baseConfig, defineConfig(${
       isComponentLib || isLib
         ? `{
+              root: resolve(pkgDir, '${pkgName}'),
               build: {
                 lib: {
                   entry: ['src/index.ts'],
+                  formats: ['cjs', 'es'],
                   fileName: formatFileName,
                 },
                 rollupOptions: {
@@ -105,8 +104,13 @@ async function genViteConfig() {
                 },
               },
             }`
-        : '{}'
-    });
+        : `{
+          root: resolve(pkgDir, '${pkgName}'),
+          define: {
+            __BROWSER__: true,
+          }
+        }`
+    }));
   `;
 
   await writeFile(
@@ -161,6 +165,7 @@ async function genEntryFile() {
       </head>
       <body>
         <div id="app"></div>
+        <script type="module" src="/src/main.ts"></script>
       </body>
       </html>
     `;

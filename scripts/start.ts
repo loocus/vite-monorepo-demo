@@ -3,32 +3,29 @@
  */
 
 import { select, Separator } from '@inquirer/prompts';
-import { createServer, mergeConfig } from 'vite';
+import { stat } from 'node:fs/promises';
+import { exists } from 'fs-extra';
+import { resolve } from 'node:path';
+import { execa } from 'execa';
+import { pkgNames, pkgDir } from '../build-utils';
 
-import { pkgNames, loadPkgConfig, isLibMode } from '../build-utils';
+const filters = [];
 
-const pkgCaches = await loadPkgConfig();
+for (const pkgName of pkgNames) {
+  const indexPath = resolve(pkgDir, pkgName, 'index.html');
+  if ((await exists(indexPath)) && (await stat(indexPath)).isFile()) {
+    filters.push(pkgName);
+  }
+}
+
+if (filters.length === 0) {
+  console.warn('未找到任何 web 应用');
+  process.exit(1);
+}
 
 const selected = await select({
   message: '请选择需要启动的应用',
-  choices: [
-    new Separator(),
-    ...pkgNames
-      .filter((pkgName) => {
-        const cache = pkgCaches.get(pkgName);
-        if (cache === null) return false;
-        return !isLibMode(cache);
-      })
-      .map((name) => ({ name, value: name })),
-  ],
+  choices: [new Separator(), ...filters.map((name) => ({ name, value: name }))],
 });
 
-let config = pkgCaches.get(selected);
-
-if (!isLibMode(config)) {
-  config = mergeConfig(config, { define: { __BROWSER__: `${true}` } });
-}
-
-const server = await createServer(config);
-await server.listen();
-server.printUrls();
+await execa('vite', ['-c', resolve(pkgDir, selected, 'vite.config.ts')], { stdio: 'inherit' });

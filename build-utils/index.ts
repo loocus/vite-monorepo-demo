@@ -1,9 +1,5 @@
 import { resolve } from 'node:path';
 import { readdir, stat } from 'fs/promises';
-import { exists } from 'fs-extra';
-import { mergeConfig } from 'vite';
-
-import type { UserConfig } from 'vite';
 
 export { runParallel } from './run-parallel';
 export { formatCode } from './format-code';
@@ -25,37 +21,12 @@ export const pkgNames = await readdir(pkgDir).then(async (fileList) => {
   return result.filter((file) => file);
 });
 
-const pkgCaches = new Map<string, UserConfig | null>();
-
 /**
- * 加载并返回 package 的配置缓存
- */
-export const loadPkgConfig = async () => {
-  if (pkgCaches.size === pkgNames.length) return pkgCaches;
-
-  const viteConfig = (await import('../config/vite.config')).default;
-
-  await Promise.all(
-    pkgNames.map(async (pkgName) => {
-      const configPath = resolve(pkgDir, pkgName, 'vite.config.ts');
-      // 判断配置文件是否存在，是否是一个文件，如果存在则加载该模块
-      if ((await exists(configPath)) && (await stat(configPath)).isFile()) {
-        const config = mergeConfig(viteConfig as UserConfig, { root: resolve(pkgDir, pkgName) });
-        pkgCaches.set(pkgName, mergeConfig(config, (await import(`file://${configPath}`)).default));
-      } else {
-        pkgCaches.set(pkgName, null);
-      }
-    })
-  );
-  return pkgCaches;
-};
-
-/**
- * 是否是库模式
- * @param userConfig
+ * 是否是库模式，package.json 文件中有 exports 字段那么就视作为一个 lib
+ * @param name
  * @returns
  */
-export const isLibMode = (userConfig: UserConfig) => userConfig?.build?.lib;
+export const isLibMode = (packageJson: Record<string, any>) => !!packageJson.exports;
 
 /**
  * 是否是生产环境
