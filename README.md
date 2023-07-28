@@ -7,7 +7,7 @@
 1.运行命令创建可选的模板
 
 ```bash
-pnpm run boostrap
+pnpm run bootstrap
 ```
 
 2.启动 app 模板项目
