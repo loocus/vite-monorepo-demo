@@ -9,7 +9,7 @@
     "type-check": "node --loader @esbuild-kit/esm-loader scripts/type-check.ts",
     "bootstrap": "node --loader @esbuild-kit/esm-loader scripts/bootstrap.ts",
     "docs-gen": "node --loader @esbuild-kit/esm-loader scripts/docs-gen.ts",
-    "preinstall": "npx only-allow pnpm",
+    "preinstall": "npx only-allow pnpm"
   },
   "type": "module",
   "keywords": [],
