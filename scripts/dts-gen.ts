@@ -94,7 +94,7 @@ function invoke(pkgName: string) {
   const extractorConfig = ExtractorConfig.prepare({
     configObject: config,
     configObjectFullPath: apiExtractorJsonPath,
-    packageJsonFullPath: resolve(rootDir, 'package.json'),
+    packageJsonFullPath: resolve(pkgDir, pkgName, 'package.json'),
   });
 
   return Extractor.invoke(extractorConfig, {

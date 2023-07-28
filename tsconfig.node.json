@@ -8,5 +8,12 @@
     "allowSyntheticDefaultImports": true,
     "types": ["node"]
   },
-  "include": ["config/**/*.ts", "build-utils/**/*.ts", "scripts/**/*.ts", "packages/*/*.ts", "packages/*/*.d.ts"],
+  "include": [
+    "config/**/*.ts",
+    "build-utils/**/*.ts",
+    "scripts/**/*.ts",
+    "packages/*/*.ts",
+    "packages/*/*.d.ts",
+    "package.json"
+  ]
 }
