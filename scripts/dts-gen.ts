@@ -5,28 +5,38 @@
 import { execa } from 'execa';
 import { checkbox, Separator } from '@inquirer/prompts';
 import { resolve } from 'path';
-import { mkdir } from 'fs/promises';
+import { mkdir, stat } from 'fs/promises';
 import { remove, exists } from 'fs-extra';
 import { format } from 'prettier';
-import { pkgNames, pkgDir, isLibMode, loadPkgConfig } from '../build-utils';
+import { pkgNames, pkgDir, isLibMode } from '../build-utils';
 import { writeFile } from 'fs/promises';
+import { pathToFileURL } from 'node:url';
 import { ExtractorConfig, Extractor, IConfigFile, ExtractorResult } from '@microsoft/api-extractor';
 
 const rootDir = process.cwd();
-const pkgCaches = await loadPkgConfig();
+const filters = [];
+
+for (const pkgName of pkgNames) {
+  const packageJsonPath = resolve(pkgDir, pkgName, 'package.json');
+  if ((await exists(packageJsonPath)) && (await stat(packageJsonPath)).isFile()) {
+    const json = await import(pathToFileURL(packageJsonPath).toString());
+    if (isLibMode(json)) {
+      filters.push(pkgName);
+    }
+  }
+}
+
+if (filters.length === 0) {
+  console.warn('未找到任何 lib 库');
+  process.exit(1);
+}
 
 /**
  * 已选中的包名列表
  */
 const checkedList = await checkbox({
   message: '请选择需要生成 d.ts 文件的包',
-  choices: [
-    new Separator(),
-    ...pkgNames
-      // 只对 lib 模式下的包生成d.ts文件
-      .filter((name) => isLibMode(pkgCaches.get(name)))
-      .map((name) => ({ name, value: name })),
-  ],
+  choices: [new Separator(), ...filters.map((name) => ({ name, value: name }))],
 });
 
 if (checkedList.length === 0) {

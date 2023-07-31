@@ -128,7 +128,10 @@ async function genEntryFile() {
   }
 
   if (isLib) {
-    const source = `
+    const source = `\
+      /**
+       * @public
+       */
       const hello = 'hello ${pkgName}';
 
       export {
