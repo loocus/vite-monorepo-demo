@@ -1,12 +1,13 @@
 /**
  * 构建所选择的包
  */
+import { resolve } from 'node:path';
 
 import { checkbox, select, Separator } from '@inquirer/prompts';
-import os from 'os';
 import { execa } from 'execa';
+import os from 'os';
+
 import { pkgNames, runParallel, pkgDir } from '../build-utils';
-import { resolve } from 'path';
 
 const selectedPkg = await checkbox({
   message: '请选择需要构建的包',

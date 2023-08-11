@@ -1,8 +1,11 @@
 import { resolve } from 'node:path';
-import { readdir, stat } from 'fs/promises';
+import { readdir } from 'fs/promises';
 
 export { runParallel } from './run-parallel';
 export { formatCode } from './format-code';
+import { isDir, isFile, getDirName, getFileName } from './fs-helper';
+
+export { isDir, isFile, getDirName, getFileName };
 
 /**
  * packages 目录
@@ -15,7 +18,11 @@ export const pkgDir = resolve(process.cwd(), 'packages');
 export const pkgNames = await readdir(pkgDir).then(async (fileList) => {
   const result = await Promise.all(
     fileList.map(async (file) => {
-      return (await stat(resolve(pkgDir, file))).isDirectory() ? file : null;
+      const pkgDirPath = resolve(pkgDir, file);
+      // 当目标是一个文件夹并且包含 package.json 文件时，才视作一个包
+      return (await isDir(pkgDirPath)) && (await isFile(resolve(pkgDirPath, 'package.json')))
+        ? file
+        : null;
     })
   );
   return result.filter((file) => file);

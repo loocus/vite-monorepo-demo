@@ -1,24 +1,25 @@
 /**
  * 为所选的包生成 d.ts 文件
  */
+import { writeFile } from 'node:fs/promises';
+import { mkdir } from 'node:fs/promises';
+import { pathToFileURL } from 'node:url';
+import { resolve } from 'node:path';
 
+import { checkbox, select, Separator } from '@inquirer/prompts';
 import { execa } from 'execa';
-import { checkbox, Separator } from '@inquirer/prompts';
-import { resolve } from 'path';
-import { mkdir, stat } from 'fs/promises';
 import { remove, exists } from 'fs-extra';
 import { format } from 'prettier';
-import { pkgNames, pkgDir, isLibMode } from '../build-utils';
-import { writeFile } from 'fs/promises';
-import { pathToFileURL } from 'node:url';
-import { ExtractorConfig, Extractor, IConfigFile, ExtractorResult } from '@microsoft/api-extractor';
+import { ExtractorConfig, Extractor } from '@microsoft/api-extractor';
+
+import { pkgNames, pkgDir, isLibMode, isFile } from '../build-utils';
 
 const rootDir = process.cwd();
 const filters = [];
 
 for (const pkgName of pkgNames) {
   const packageJsonPath = resolve(pkgDir, pkgName, 'package.json');
-  if ((await exists(packageJsonPath)) && (await stat(packageJsonPath)).isFile()) {
+  if (await isFile(packageJsonPath)) {
     const json = await import(pathToFileURL(packageJsonPath).toString());
     if (isLibMode(json)) {
       filters.push(pkgName);
@@ -27,7 +28,7 @@ for (const pkgName of pkgNames) {
 }
 
 if (filters.length === 0) {
-  console.warn('未找到任何 lib 库');
+  console.warn('未找到任何 lib');
   process.exit(1);
 }
 
@@ -37,6 +38,11 @@ if (filters.length === 0) {
 const checkedList = await checkbox({
   message: '请选择需要生成 d.ts 文件的包',
   choices: [new Separator(), ...filters.map((name) => ({ name, value: name }))],
+});
+
+const enableDocModel = await select({
+  message: '是否生成文档配置文件',
+  choices: [new Separator(), { name: '是', value: true }, { name: '否', value: false }],
 });
 
 if (checkedList.length === 0) {
@@ -89,13 +95,15 @@ await remove(moduleConfigPath);
 await remove(dtsTempDir);
 
 function invoke(pkgName: string) {
+  // 是否开启文档模式
+  config.docModel.enabled = enableDocModel;
   // 指定要分析的入口文件
   config.mainEntryPointFilePath =
     checkedList.length === 1
       ? resolve(dtsTempDir, 'index.d.ts')
       : resolve(dtsTempDir, pkgName, 'src/index.d.ts');
   // 指定合并过后 d.ts 文件的输出路径
-  config.dtsRollup.publicTrimmedFilePath = resolve(pkgDir, pkgName, 'dist/index.d.ts');
+  config.dtsRollup.publicTrimmedFilePath = resolve(pkgDir, pkgName, `dist/${pkgName}.d.ts`);
   // 指定报告文件的输出路径
   config.apiReport.reportFolder = resolve(pkgDir, pkgName, 'api-config');
   // 指定生成的 api.json 文件的输出路径

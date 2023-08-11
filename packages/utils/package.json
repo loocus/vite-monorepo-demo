@@ -1,0 +1,18 @@
+{
+  "name": "@vite-monorepo-demo/utils",
+  "version": "0.0.0",
+  "description": "",
+  "type": "module",
+  "main": "dist/utils.cjs.js",
+  "module": "dist/utils.es.js",
+  "types": "dist/utils.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/utils.es.js",
+      "require": "./dist/utils.cjs.js"
+    }
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "peerDependencies": {}
+}

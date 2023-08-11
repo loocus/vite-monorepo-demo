@@ -1,0 +1,20 @@
+{
+  "name": "@vite-monorepo-demo/components",
+  "version": "0.0.0",
+  "description": "",
+  "type": "module",
+  "main": "dist/components.cjs.js",
+  "module": "dist/components.es.js",
+  "types": "dist/components.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/components.es.js",
+      "require": "./dist/components.cjs.js"
+    }
+  },
+  "dependencies": {
+    "vue": "^3.3.4"
+  },
+  "devDependencies": {},
+  "peerDependencies": {}
+}

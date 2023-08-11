@@ -1,0 +1,9 @@
+{
+  "name": "@vite-monorepo-demo/app",
+  "version": "0.0.0",
+  "description": "",
+  "type": "module",
+  "dependencies": {
+    "vue": "^3.3.4"
+  }
+}

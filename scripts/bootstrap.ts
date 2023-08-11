@@ -2,27 +2,15 @@
  * 快速生成一个 package 模板
  */
 
-import { input, select, Separator } from '@inquirer/prompts';
 import { mkdir, writeFile } from 'node:fs/promises';
-import { exists } from 'fs-extra';
-import { pkgNames, pkgDir, formatCode } from '../build-utils';
 import { resolve } from 'node:path';
+
+import { input, select, Separator } from '@inquirer/prompts';
+
+import { pkgNames, pkgDir, formatCode } from '../build-utils';
 import packageJson from '../package.json';
 
 const { name: pkgPrefix, dependencies } = packageJson;
-
-const pkgName = await input({
-  message: '请输入包名',
-  validate: (input) => {
-    if (!input || input === '') return '包名不能为空';
-
-    if (pkgNames.includes(input)) return '包名已存在';
-
-    if (!/^[@a-z]+(-[a-z0-9]+)*$/.test(input)) return '包名格式不正确';
-
-    return true;
-  },
-});
 
 const pkgType = await select({
   message: '请选择包类型',
@@ -33,132 +21,81 @@ const pkgType = await select({
     { name: '组件库', value: 'component-lib' },
   ],
 });
+
+const pkgName = await input({
+  message: '请输入包名',
+  validate: (input) => {
+    if (!input || input === '') return '包名不能为空';
+
+    if (pkgNames.includes(input)) return '包名已存在';
+
+    if (!/^[a-z]+(-[a-z0-9]+)*$/.test(input)) return '包名格式不正确';
+
+    return true;
+  },
+});
+
 const isApp = pkgType === 'app';
 const isLib = pkgType === 'lib';
 const isComponentLib = pkgType === 'component-lib';
 const pkgDirPath = resolve(pkgDir, pkgName);
+const sourceDirPath = resolve(pkgDirPath, 'src');
+const encode = 'utf-8';
 
 await mkdir(pkgDirPath);
+await mkdir(sourceDirPath);
 
-await Promise.all([genPackageJson(), genViteConfig(), genEntryFile()]);
-
-async function genPackageJson() {
-  // 创建 package.json 文件
-  const pkgJson = {
-    name: `@${pkgPrefix}/${pkgName}`,
-    version: '0.0.0',
-    description: '',
-    type: 'module',
-  };
-
-  if (isApp) {
-    Object.assign(pkgJson, {
-      dependencies: {
-        vue: dependencies.vue,
-      },
-    });
-  } else if (isLib || isComponentLib) {
-    Object.assign(pkgJson, {
-      main: 'dist/index.cjs.js',
-      module: 'dist/index.es.js',
-      types: 'dist/index.d.ts',
-      exports: {
-        '.': {
-          import: './dist/index.es.js',
-          require: './dist/index.cjs.js',
-        },
-      },
-    });
-  }
-
-  const source = await formatCode(JSON.stringify(pkgJson), { parser: 'json-stringify' });
-
-  await writeFile(resolve(pkgDirPath, 'package.json'), source, 'utf-8');
+if (isApp) {
+  createAppTemplate();
+} else if (isLib) {
+  createLibTemplate();
+} else if (isComponentLib) {
+  createComponentLibTemplate();
 }
 
-async function genViteConfig() {
-  // 创建 vite.config.ts 文件
-  const source = `
-    import { defineConfig, mergeConfig } from 'vite';
-    import { formatFileName, pkgDir } from '../../build-utils';
-    import baseConfig from '../../config/vite.config';
-    import { resolve } from 'node:path';
+/**
+ * 创建 app 模板
+ */
+async function createAppTemplate() {
+  const packageJson = await formatCode(
+    `
+      {
+        "name": "@${pkgPrefix}/${pkgName}",
+        "version": "0.0.0",
+        "description": "",
+        "type": "module",
+        "dependencies": {
+          "vue": "^3.3.4"
+        },
+      }
+    `,
+    { parser: 'json-stringify' }
+  );
 
-    export default mergeConfig(baseConfig, defineConfig(${
-      isComponentLib || isLib
-        ? `{
-              root: resolve(pkgDir, '${pkgName}'),
-              build: {
-                lib: {
-                  entry: ['src/index.ts'],
-                  formats: ['cjs', 'es'],
-                  fileName: formatFileName,
-                },
-                rollupOptions: {
-                  external: ['vue'],
-                  output: {
-                    globals: {
-                      vue: 'Vue',
-                    },
-                  },
-                },
-              },
-            }`
-        : `{
-          root: resolve(pkgDir, '${pkgName}'),
+  const viteConfig = await formatCode(
+    `
+      import { defineConfig, mergeConfig } from 'vite';
+
+      import { getDirName } from '../../build-utils';
+      import baseConfig from '../../config/vite.config';
+
+      const __dirname = getDirName(import.meta.url);
+
+      export default mergeConfig(
+        baseConfig,
+        defineConfig({
+          root: __dirname,
           define: {
             __BROWSER__: true,
           }
-        }`
-    }));
-  `;
-
-  await writeFile(
-    resolve(pkgDirPath, 'vite.config.ts'),
-    await formatCode(source, { parser: 'typescript' }),
-    'utf-8'
+        })
+      );
+    `,
+    { parser: 'typescript' }
   );
-}
 
-async function genEntryFile() {
-  const sourceDirPath = resolve(pkgDirPath, 'src');
-  // 创建文件夹
-  if (!(await exists(sourceDirPath))) {
-    await mkdir(sourceDirPath);
-  }
-
-  if (isLib) {
-    const source = `\
-      /**
-       * @public
-       */
-      const hello = 'hello ${pkgName}';
-
-      export {
-        hello,
-      };
-    `;
-    // 创建 index.ts 文件
-    await writeFile(
-      resolve(sourceDirPath, 'index.ts'),
-      await formatCode(source, { parser: 'typescript' }),
-      'utf-8'
-    );
-  } else if (isApp) {
-    const mainSource = `
-      import { createApp } from 'vue';
-      import App from './app.vue';
-
-      createApp(App).mount('#app');
-    `;
-    const appSource = `
-      <script setup lang="ts"></script>
-
-      <template>
-        <div>app</div>
-      </template>
-    `;
-    const htmlSource = `
+  const indexHtml = await formatCode(
+    `
       <!DOCTYPE html>
       <html lang="en">
       <head>
@@ -171,27 +108,22 @@ async function genEntryFile() {
         <script type="module" src="/src/main.ts"></script>
       </body>
       </html>
-    `;
-    // 创建 index.html 文件
-    await writeFile(
-      resolve(pkgDirPath, 'index.html'),
-      await formatCode(htmlSource, { parser: 'html' }),
-      'utf-8'
-    );
-    // 创建 app.vue 文件
-    await writeFile(
-      resolve(sourceDirPath, 'app.vue'),
-      await formatCode(appSource, { parser: 'vue' }),
-      'utf-8'
-    );
-    // 创建 main.ts 文件
-    await writeFile(
-      resolve(sourceDirPath, 'main.ts'),
-      await formatCode(mainSource, { parser: 'typescript' }),
-      'utf-8'
-    );
-  } else if (isComponentLib) {
-    const myComponentSource = `
+    `,
+    { parser: 'html' }
+  );
+
+  const main = await formatCode(
+    `
+      import { createApp } from 'vue';
+      import App from './app.vue';
+
+      createApp(App).mount('#app');
+    `,
+    { parser: 'typescript' }
+  );
+
+  const appComponent = await formatCode(
+    `
       <script lang="ts">
         import { defineComponent } from 'vue';
 
@@ -205,25 +137,216 @@ async function genEntryFile() {
       </template>
 
       <style scoped></style>
-    `;
-    const indexSource = `
+    `,
+    { parser: 'vue' }
+  );
+
+  const pathMapper = {
+    [resolve(pkgDirPath, 'package.json')]: packageJson,
+    [resolve(pkgDirPath, 'vite.config.ts')]: viteConfig,
+    [resolve(pkgDirPath, 'index.html')]: indexHtml,
+    [resolve(sourceDirPath, 'main.ts')]: main,
+    [resolve(sourceDirPath, 'app.vue')]: appComponent,
+  };
+
+  for (const [path, source] of Object.entries(pathMapper)) {
+    await writeFile(path, source, encode);
+  }
+}
+
+/**
+ * 创建 lib 模板
+ */
+async function createLibTemplate() {
+  const packageJson = await formatCode(
+    `
+      {
+        "name": "@${pkgPrefix}/${pkgName}",
+        "version": "0.0.0",
+        "description": "",
+        "type": "module",
+        "main": "dist/${pkgName}.cjs.js",
+        "module": "dist/${pkgName}.es.js",
+        "types": "dist/${pkgName}.d.ts",
+        "exports": {
+          ".": {
+            "import": "./dist/${pkgName}.es.js",
+            "require": "./dist/${pkgName}.cjs.js"
+          }
+        },
+        "dependencies": {},
+        "devDependencies": {},
+        "peerDependencies": {}
+      }
+    `,
+    { parser: 'json-stringify' }
+  );
+
+  const viteConfig = await formatCode(
+    `
+      import { defineConfig, mergeConfig } from 'vite';
+
+      import { getDirName } from '../../build-utils';
+      import baseConfig from '../../config/vite.config';
+      import packageJson from './package.json';
+
+      const __dirname = getDirName(import.meta.url);
+
+      const external = [
+        ...Object.keys(packageJson.dependencies ?? {}),
+        ...Object.keys(packageJson.devDependencies ?? {}),
+        ...Object.keys(packageJson.peerDependencies ?? {}),
+      ];
+
+      export default mergeConfig(
+        baseConfig,
+        defineConfig({
+          root: __dirname,
+          build: {
+            lib: {
+              entry: ['src/index.ts'],
+              formats: ['cjs', 'es'],
+              fileName: (format) => \`${pkgName}.\${format}.js\`,
+            },
+            rollupOptions: {
+              external: [...external],
+            },
+          },
+        })
+      );
+    `,
+    { parser: 'typescript' }
+  );
+
+  const index = await formatCode(
+    `
+      /**
+       * @public
+       */
+      const hello = 'hello ${pkgName}';
+
+      export {
+        hello,
+      };
+    `,
+    { parser: 'typescript' }
+  );
+
+  const pathMapper = {
+    [resolve(pkgDirPath, 'package.json')]: packageJson,
+    [resolve(pkgDirPath, 'vite.config.ts')]: viteConfig,
+    [resolve(sourceDirPath, 'index.ts')]: index,
+  };
+
+  for (const [path, source] of Object.entries(pathMapper)) {
+    await writeFile(path, source, encode);
+  }
+}
+
+/**
+ * 创建组件库模板
+ */
+async function createComponentLibTemplate() {
+  const packageJson = await formatCode(
+    `
+      {
+        "name": "@${pkgPrefix}/${pkgName}",
+        "version": "0.0.0",
+        "description": "",
+        "type": "module",
+        "main": "dist/${pkgName}.cjs.js",
+        "module": "dist/${pkgName}.es.js",
+        "types": "dist/${pkgName}.d.ts",
+        "exports": {
+          ".": {
+            "import": "./dist/${pkgName}.es.js",
+            "require": "./dist/${pkgName}.cjs.js"
+          }
+        },
+        "dependencies": {
+          "vue": "${dependencies.vue}"
+        },
+        "devDependencies": {},
+        "peerDependencies": {}
+      }
+    `,
+    { parser: 'json-stringify' }
+  );
+
+  const viteConfig = await formatCode(
+    `
+      import { defineConfig, mergeConfig } from 'vite';
+
+      import { getDirName } from '../../build-utils';
+      import baseConfig from '../../config/vite.config';
+      import packageJson from './package.json';
+
+      const __dirname = getDirName(import.meta.url);
+
+      const external = [
+        ...Object.keys(packageJson.dependencies ?? {}),
+        ...Object.keys(packageJson.devDependencies ?? {}),
+        ...Object.keys(packageJson.peerDependencies ?? {}),
+      ];
+
+      export default mergeConfig(
+        baseConfig,
+        defineConfig({
+          root: __dirname,
+          build: {
+            lib: {
+              entry: ['src/index.ts'],
+              formats: ['cjs', 'es'],
+              fileName: (format) => \`${pkgName}.\${format}.js\`,
+            },
+            rollupOptions: {
+              external: [...external],
+            },
+          },
+        })
+      );
+    `,
+    { parser: 'typescript' }
+  );
+
+  const myComponent = await formatCode(
+    `
+      <script lang="ts">
+        import { defineComponent } from 'vue';
+
+        export default defineComponent({
+          name: 'my-component',
+        });
+      </script>
+
+      <template>
+        <div>my-component</div>
+      </template>
+
+      <style scoped></style>
+    `,
+    { parser: 'vue' }
+  );
+
+  const index = await formatCode(
+    `
       import MyComponent from './my-component.vue';
 
       export {
         MyComponent,
       };
-    `;
+    `,
+    { parser: 'typescript' }
+  );
 
-    await writeFile(
-      resolve(sourceDirPath, 'my-component.vue'),
-      await formatCode(myComponentSource, { parser: 'vue' }),
-      'utf-8'
-    );
+  const pathMapper = {
+    [resolve(pkgDirPath, 'package.json')]: packageJson,
+    [resolve(pkgDirPath, 'vite.config.ts')]: viteConfig,
+    [resolve(sourceDirPath, 'my-component.vue')]: myComponent,
+    [resolve(sourceDirPath, 'index.ts')]: index,
+  };
 
-    await writeFile(
-      resolve(sourceDirPath, 'index.ts'),
-      await formatCode(indexSource, { parser: 'typescript' }),
-      'utf-8'
-    );
+  for (const [path, source] of Object.entries(pathMapper)) {
+    await writeFile(path, source, encode);
   }
 }

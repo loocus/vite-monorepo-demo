@@ -2,18 +2,17 @@
  * 启动所选应用
  */
 
-import { select, Separator } from '@inquirer/prompts';
-import { stat } from 'node:fs/promises';
-import { exists } from 'fs-extra';
 import { resolve } from 'node:path';
 import { execa } from 'execa';
-import { pkgNames, pkgDir } from '../build-utils';
+import { select, Separator } from '@inquirer/prompts';
+
+import { pkgNames, pkgDir, isFile } from '../build-utils';
 
 const filters = [];
 
 for (const pkgName of pkgNames) {
   const indexPath = resolve(pkgDir, pkgName, 'index.html');
-  if ((await exists(indexPath)) && (await stat(indexPath)).isFile()) {
+  if (await isFile(indexPath)) {
     filters.push(pkgName);
   }
 }
