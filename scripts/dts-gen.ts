@@ -98,10 +98,7 @@ function invoke(pkgName: string) {
   // 是否开启文档模式
   config.docModel.enabled = enableDocModel;
   // 指定要分析的入口文件
-  config.mainEntryPointFilePath =
-    checkedList.length === 1
-      ? resolve(dtsTempDir, 'index.d.ts')
-      : resolve(dtsTempDir, pkgName, 'src/index.d.ts');
+  config.mainEntryPointFilePath = resolve(dtsTempDir, 'packages', pkgName, 'src/index.d.ts');
   // 指定合并过后 d.ts 文件的输出路径
   config.dtsRollup.publicTrimmedFilePath = resolve(pkgDir, pkgName, `dist/${pkgName}.d.ts`);
   // 指定报告文件的输出路径

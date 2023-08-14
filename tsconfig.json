@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "rootDir": ".",
     "baseUrl": ".",
     "target": "es2022",
     "useDefineForClassFields": true,
@@ -25,6 +26,12 @@
       "@vite-monorepo-demo/core": ["packages/core/src"]
     }
   },
-  "include": ["packages/**/src/*.ts", "packages/**/src/*.d.ts", "packages/**/src/*.vue", "packages/*d.ts"],
+  "include": [
+    "packages/**/src/*.ts",
+    "packages/**/src/*.d.ts",
+    "packages/**/src/*.vue",
+    "packages/**/**/types",
+    "packages/*d.ts"
+  ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
