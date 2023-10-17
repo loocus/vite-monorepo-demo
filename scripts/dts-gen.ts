@@ -63,6 +63,10 @@ const moduleConfig = {
     declarationMap: true,
     declarationDir: dtsTempDir,
     emitDeclarationOnly: true,
+    paths: {},
+    skipLibCheck: true,
+    // 针对 monorepo 项目，不严格检查导入包的类型
+    noImplicitAny: false,
   },
   exclude: [...pkgNames]
     .filter((pkgName) => !checkedList.includes(pkgName))
@@ -95,6 +99,8 @@ await remove(moduleConfigPath);
 await remove(dtsTempDir);
 
 function invoke(pkgName: string) {
+  // 指定 tsconfig.json 文件的路径
+  config.compiler.tsconfigFilePath = moduleConfigPath;
   // 是否开启文档模式
   config.docModel.enabled = enableDocModel;
   // 指定要分析的入口文件
